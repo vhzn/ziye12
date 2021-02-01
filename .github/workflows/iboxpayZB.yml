@@ -6,7 +6,7 @@ name: 笑谱直播
 on:
   workflow_dispatch:
   schedule:
-     - cron: '*/10 * * * *'
+     - cron: '*/30 8-17 * * *'
   watch:
     types: started
 jobs:
@@ -31,7 +31,7 @@ jobs:
         run: |
           cd ~/JavaScript
           npm install
-      - name: '运行 【笑谱】'
+      - name: '运行 【笑谱直播】'
         if: env.XP_iboxpayHEADER
         run: |
           cd ~/JavaScript
