@@ -25,6 +25,10 @@ boxjs链接  https://raw.githubusercontent.com/ziye12/JavaScript/main/Task/ziye.
 2.1 增加CK获取时间
 2.2 优化
 2.3 修复直播问题，采用真实直播id
+2.3 设置LIVE 为61 时  单跑直播
+2.3 修复错误，修复直播收益显示
+2.4 修复金蛋问题，增加视频收益统计，增加上限判定，达到上限以及19点后不执行视频，
+2.4 直播限制为30  设置LIVE为31 以及19点后 单跑直播
 
 ⚠️一共2个位置 2个ck  👉 3条 Secrets 
 多账号换行
@@ -78,8 +82,9 @@ const notifyttt = 1 // 0为关闭外部推送，1为12 23 点外部推送
 const notifyInterval = 2; // 0为关闭通知，1为所有通知，2为12 23 点通知  ， 3为 6 12 18 23 点通知 
 const CS = 6
 $.message = '', COOKIES_SPLIT = '', CASH = '', LIVE = '', ddtime = '', spid = '', TOKEN = '', zbid = '', cashcs = '', newcashcs = '', liveId = '';
-let ins = 0,
-    livecs = 0;
+let livecs = 0,
+    videoscs = 0,
+    liveIdcd = 0;
 RT = 30000;
 const iboxpayheaderArr = [];
 let iboxpayheaderVal = ``;
@@ -201,7 +206,7 @@ nowTimes = new Date(
 //今天
 Y = nowTimes.getFullYear() + '-';
 M = (nowTimes.getMonth() + 1 < 10 ? '0' + (nowTimes.getMonth() + 1) : nowTimes.getMonth() + 1) + '-';
-D = nowTimes.getDate();
+D = (nowTimes.getDate() + 1 < 10 ? '0' + (nowTimes.getDate()) : nowTimes.getMonth());
 ddtime = Y + M + D;
 console.log(ddtime)
 //当前时间戳
@@ -278,9 +283,11 @@ async function all() {
             iboxpayheaderVal = iboxpayheaderArr[i];
             refreshtokenVal = refreshtokenArr[i];
         }
+
+
         traceid = JSON.parse(iboxpayheaderVal)["traceid"];
         token = JSON.parse(iboxpayheaderVal)["token"];
-        oldtime = traceid.substr(traceid.indexOf("161"), 13);
+        oldtime = traceid.substring(20, 33);
         O = (`${$.name + (i + 1)}🔔`);
         await console.log(`-------------------------\n\n🔔开始运行【${$.name+(i+1)}】`)
         console.log('CK获取时间:' + time(Number(oldtime)))
@@ -290,32 +297,37 @@ async function all() {
             continue;
         }
         await cktime(); //CK获取时间
+        await hdid(); //活动id
         await goldcoin(); //金币信息
         await coin(); //账户信息
-        await hdid(); //活动id
+        await sylist(); //收益列表
+        await splimit(); //视频上限
         await newcashlist(); //提现查询
         await cashlist(); //今日提现查询
         if (!cashcs.amount && CASH >= 1 && $.coin.data.balance / 100 >= CASH) {
             await withdraw(); //提现
         }
-        if (LIVE >= 1 && nowTimes.getHours() >= 8 && nowTimes.getHours() <= 23) {
-            await sylist(); //收益列表
-            if ($.sylist.resultCode && livecs < LIVE) {
-                await liveslist(); //直播节目表
-                await lives(); //看直播
+        if (LIVE >= 1 && nowTimes.getHours() >= 8 && nowTimes.getHours() <= 23 && $.sylist.resultCode && livecs < LIVE) {
+            await liveslist(); //直播节目表
+            dd = liveIdcd * 35 - 34
+            console.log(`📍本次直播运行需要${dd}秒` + '\n')
+            await lives(); //看直播
+            await $.wait(dd * 1000)
+
+        }
+
+        if (LIVE != 31 && nowTimes.getHours() <= 18 && $.splimit.data.isUperLimit == false || tts() <= (Number(oldtime) + 48 * 60 * 60 * 1000)) {
+            tt = CS * 30 - 29
+            console.log(`📍本次视频运行需要${tt}秒` + '\n')
+            await play(); //播放       
+            await video(); //视频
+            await $.wait(tt * 1000)
+            if (!newcashcs.amount) {
+                await newvideo(); //新人福利
             }
-        }
-        await $.wait(liveIdcd * 40000 - 39000);
-        await play(); //播放       
-        let video_is_live = await video(i + 1); //视频
-        if (!video_is_live) {
-            continue;
-        }
-        if (!newcashcs.amount) {
-            await newvideo(); //新人福利
-        }
-        if ($.video.data.goldCoinNumber != 0) {
-            await goldvideo(); //金蛋视频
+            if ($.video.data && $.video.data.goldCoinNumber != 0 && videoPublishId6) {
+                await goldvideo(); //金蛋视频
+            }
         }
 
     }
@@ -420,7 +432,7 @@ function goldcoin(timeout = 0) {
                 try {
                     if (logs) $.log(`${O}, 金币信息🚩: ${data}`);
                     $.goldcoin = JSON.parse(data);
-                    $.message += '【金币信息】：今日金币' + $.goldcoin.data.coinSum + ',预估金额' + $.goldcoin.data.balanceSum / 100 + '元' + '\n';
+                    $.message += '【金币信息】：今日金币' + $.goldcoin.data.coinSum + ',预估金额' + $.goldcoin.data.balanceSum / 100 + '元\n';
                 } catch (e) {
                     $.logErr(e, resp);
                 } finally {
@@ -446,6 +458,8 @@ function hdid(timeout = 0) {
                     if ($.hdid.resultCode == 1) {
                         spid = $.hdid.data.everyDayActivityList.find(item => item.actTypeId === 9)
                         zbid = $.hdid.data.everyDayActivityList.find(item => item.actTypeId === 10)
+                        console.log(spid.actName + 'ID：' + spid.actId + '\n' +
+                            zbid.actName + 'ID：' + zbid.actId + '\n');
                         $.message += '【' + spid.actName + 'ID】：' + spid.actId + '\n' +
                             '【' + zbid.actName + 'ID】：' + zbid.actId + '\n';
                     }
@@ -471,7 +485,7 @@ function coin(timeout = 0) {
                 try {
                     if (logs) $.log(`${O}, 账户信息🚩: ${data}`);
                     $.coin = JSON.parse(data);
-                    $.message += '【账户信息】：可提余额' + $.coin.data.balance / 100 + ',明日入账' + $.coin.data.tomorrowAmt / 100 + '元' + '\n';
+                    $.message += '【账户信息】：明日入账' + $.coin.data.tomorrowAmt / 100 + '元,可提余额' + $.coin.data.balance / 100 + '元\n';
                 } catch (e) {
                     $.logErr(e, resp);
                 } finally {
@@ -490,7 +504,7 @@ function play(timeout = 0) {
                     header = iboxpayheaderVal.replace(`${token}`, `${TOKEN}`).replace(`${oldtime}`, `${tts()}`)
                     do playTime = Math.floor(Math.random() * 31);
                     while (playTime < 20)
-                    do playTimess = Math.floor(Math.random() * 41);
+                    do playTimess = Math.floor(Math.random() * 36);
                     while (playTimess < 30)
                     do playid = Math.floor(Math.random() * 49600000000000000);
                     while (playid < 10000000000000000)
@@ -533,6 +547,9 @@ function play(timeout = 0) {
 function video(timeout = 0) {
     return new Promise((resolve) => {
         setTimeout(() => {
+            var inss = 0;
+
+
             for (let i = 0; i < CS; i++) {
                 $.index = i + 1
                 setTimeout(() => {
@@ -547,21 +564,10 @@ function video(timeout = 0) {
                         try {
                             if (logs) $.log(`${O}, 视频🚩: ${data}`);
                             $.video = JSON.parse(data);
-                            if ($.video.resultCode == 0) {
-                                $.message += '⚠️' + $.video.errorDesc + '\n'
-                                resolve(false);
-                            } else if ($.video.data.goldCoinNumber == 0) {
-                                console.log(`恭喜您的账号已灰，已无法获取视频奖励\n`);
-                                $.message +=
-                                    `【视频奖励】：恭喜您的账号已灰，已无法获取视频奖励\n`
-                                resolve(false);
-                            } else {
+
+                            if ($.video.data && $.video.data.goldCoinNumber != 0) {
                                 console.log(`开始领取第${i+1}次视频奖励，获得${$.video.data.goldCoinNumber}金币\n`);
-                                ins += $.video.data.goldCoinNumber;
-                                await $.wait($.index * 30000 - 29000);
-                                $.message +=
-                                    `【视频奖励】：共领取${$.index}次视频奖励，共${ins}金币\n`
-                                resolve(true);
+                                inss += $.video.data.goldCoinNumber;
                             }
                         } catch (e) {
                             $.logErr(e, resp);
@@ -571,11 +577,26 @@ function video(timeout = 0) {
                     })
                 }, i * 30000);
             }
+            setTimeout(() => {
+                if ($.video.resultCode == 0) {
+                    console.log('视频奖励：⚠️' + $.video.errorDesc + '\n');
+                    $.message += '【视频奖励】：⚠️' + $.video.errorDesc + '\n'
+                }
+                if ($.video.data && $.video.data.goldCoinNumber == 0) {
+                    console.log(`视频奖励：恭喜您的账号已灰，已无法获取视频奖励\n`);
+                    $.message += `【视频奖励】：恭喜您的账号已灰，已无法获取视频奖励\n`
+                }
+                if ($.video.data && $.video.data.goldCoinNumber != 0) {
+                    console.log(`视频奖励：共领取${CS}次视频奖励，共${inss}金币\n`);
+                    $.message += `【视频奖励】：共领取${CS}次视频奖励，共${inss}金币\n`
+                }
+            }, CS * 30000 - 29000)
+
         }, timeout)
     })
 }
 //金蛋视频
-function goldvideo(timeout = 60000) {
+function goldvideo(timeout = 40000) {
     return new Promise((resolve) => {
         setTimeout(() => {
             header = iboxpayheaderVal.replace(`${token}`, `${TOKEN}`).replace(`${oldtime}`, `${tts()}`)
@@ -609,7 +630,7 @@ function goldvideo(timeout = 60000) {
     })
 }
 //新人福利
-function newvideo(timeout = 60000) {
+function newvideo(timeout = 40000) {
     return new Promise((resolve) => {
         setTimeout(() => {
             header = iboxpayheaderVal.replace(`${token}`, `${TOKEN}`).replace(`${oldtime}`, `${tts()}`)
@@ -681,9 +702,10 @@ function liveslist(timeout = 0) {
 function lives(timeout = 0) {
     return new Promise((resolve) => {
         setTimeout(() => {
+            var ins = 0;
             for (let i = 0; i < liveIdcd; i++) {
                 $.index = i + 1
-                do RT = Math.floor(Math.random() * 40000);
+                do RT = Math.floor(Math.random() * 35000);
                 while (RT < 30000)
                 setTimeout(() => {
                     header = iboxpayheaderVal.replace(`${token}`, `${TOKEN}`).replace(`${oldtime}`, `${tts()}`)
@@ -722,7 +744,7 @@ function lives(timeout = 0) {
             setTimeout(() => {
                 console.log(`直播奖励：共领取${ins/500}次直播奖励，共${ins}金币\n`);
                 $.message += `【直播奖励】：共领取${ins/500}次直播奖励，共${ins}金币\n`
-            }, liveIdcd * 40000 - 39000)
+            }, liveIdcd * 35000 - 34000)
         }, timeout)
     })
 }
@@ -739,17 +761,60 @@ function sylist(timeout = 0) {
                 try {
                     if (logs) $.log(`${O}, 收益列表🚩: ${data}`);
                     $.sylist = JSON.parse(data);
-                    if ($.sylist.resultCode == 1 && data.match(/:500,/g)) {
-                        live = data.match(/:500,/g);
+
+                    if ($.sylist.resultCode == 1 && data.match(/"actTypeId":10,/g)) {
+                        live = data.match(/"actTypeId":10,/g);
                         livecs = live.length;
-                        console.log('已获得直播奖励 ' + livecs + ' 次，共' + livecs * 500 + '金币\n')
-                        $.message +=
-                            '【直播收益】：已获得直播奖励 ' + livecs + ' 次，共' + livecs * 500 + '金币\n'
                     } else livecs = 0
+
+                    if ($.sylist.resultCode == 1 && data.match(/"actTypeId":9,/g)) {
+
+                        videos = data.match(/"actTypeId":9,/g);
+                        videoscs = videos.length;
+                    } else videoscs = 0;
+
+                    spsy = $.goldcoin.data.coinSum - livecs * 500
+                    console.log('已获得直播奖励 ' + livecs + ' 次，共' + livecs * 500 + '金币\n')
+                    $.message +=
+                        '【直播收益】：已获得直播奖励 ' + livecs + ' 次，共' + livecs * 500 + '金币\n'
+                    console.log('已获得视频奖励 ' + videoscs + ' 次，共' + spsy + '金币\n')
+                    $.message +=
+                        '【视频收益】：已获得视频奖励 ' + videoscs + ' 次，共' + spsy + '金币\n'
+
                     if ($.sylist.resultCode == 0) {
                         console.log($.sylist.errorDesc + '\n');
                         $.message +=
-                            '【直播收益】：' + $.sylist.errorDesc + '\n';
+                            '【收益列表】：' + $.sylist.errorDesc + '\n';
+                    }
+                } catch (e) {
+                    $.logErr(e, resp);
+                } finally {
+                    resolve()
+                }
+            })
+        }, timeout)
+    })
+}
+//视频上限  
+function splimit(timeout = 0) {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            header = iboxpayheaderVal.replace(`${token}`, `${TOKEN}`).replace(`${oldtime}`, `${tts()}`)
+            let url = {
+                url: `https://veishop.iboxpay.com/nf_gateway/nf_customer_activity/day_cash/ignore_tk/v1/get_video_act.json`,
+                headers: JSON.parse(header),
+            }
+            $.get(url, async (err, resp, data) => {
+                try {
+                    if (logs) $.log(`${O}, 视频上限🚩: ${data}`);
+                    $.splimit = JSON.parse(data);
+                    if ($.splimit.resultCode == 1) {
+                        console.log('视频上限：今日上限' + $.splimit.data.goldCoinDayLimit + '金币,今日未得' + ($.splimit.data.goldCoinDayLimit - spsy) + '金币\n');
+                        $.message += '【视频上限】：今日上限' + $.splimit.data.goldCoinDayLimit + '金币,今日未得' + ($.splimit.data.goldCoinDayLimit - spsy) + '金币\n';
+                    }
+                    if ($.splimit.data.isUperLimit == true) {
+                        console.log('视频上限：今日达到上限\n');
+                        $.message += '【视频上限】：今日达到上限\n';
                     }
                 } catch (e) {
                     $.logErr(e, resp);
