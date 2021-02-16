@@ -1,5 +1,5 @@
 # File: .github/workflows/repo-sync.yml
-name: sync-ziye12-JavaScript
+name: sync-ziye66666-JavaScript
 on:
   schedule:
     - cron: '1 */3 * * *'
@@ -7,7 +7,7 @@ on:
   watch:
     types: started
   repository_dispatch:
-    types: sync-ziye12-JavaScript
+    types: sync-ziye66666-JavaScript
 jobs:
   repo-sync:
     env:
@@ -20,11 +20,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: sync ziye12-JavaScript
+      - name: sync ziye66666-JavaScript
         uses: repo-sync/github-sync@v2
         if: env.PAT
         with:
-          source_repo: "https://github.com/ziye12/JavaScript.git"
+          source_repo: "https://github.com/ziye66666/JavaScript.git"
           source_branch: "main"
           destination_branch: "main"
           github_token: ${{ secrets.PAT }}
